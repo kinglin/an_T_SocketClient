@@ -38,6 +38,10 @@ public class MainActivity extends ActionBarActivity {
 
 		//用handler管理处理线程调用UI
 		myHandler = new MyHandler();
+		final Socket socket = new Socket();
+		
+		ConnectThread connectThread = new ConnectThread(socket);
+		connectThread.start();
 		
 		//设置按钮响应函数
 		send.setOnClickListener(new View.OnClickListener() {
@@ -45,7 +49,7 @@ public class MainActivity extends ActionBarActivity {
 			@Override
 			public void onClick(View v) {
 				//网络连接的工作一定要在线程中完成
-				ClientThread clientThread = new ClientThread();
+				ClientThread clientThread = new ClientThread(socket);
 				clientThread.start();
 			}
 		});
@@ -54,22 +58,23 @@ public class MainActivity extends ActionBarActivity {
 	//客户端线程
 	public class ClientThread extends Thread{
 		
+		Socket socket = null;
+		
+		ClientThread(Socket socket){
+			this.socket = socket;
+		}
+		
 		//重写run函数
 		public void run() {
 			
-			Socket socket = null;
-			InetSocketAddress ipAddress = null;
-			int timeout = 3000;
+//			Socket socket = null;
+//			InetSocketAddress ipAddress = null;
+//			int timeout = 3000;
 			String msgFromServer = null;
 
 			String sentence = edittext.getText().toString()+"\r\n";
 			
 			try {
-				//设置网络连接
-				socket = new Socket();
-				ipAddress = new InetSocketAddress("192.168.8.100", 12345);
-				socket.connect(ipAddress, timeout);
-				
 				//向服务端发送数据
 				BufferedWriter bw = null;
 				bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
@@ -86,9 +91,9 @@ public class MainActivity extends ActionBarActivity {
 				myHandler.sendMessage(msg);
 				
 				//关闭连接
-				bw.close();
-				br.close();
-				socket.close();
+//				bw.close();
+//				br.close();
+//				socket.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -107,6 +112,32 @@ public class MainActivity extends ActionBarActivity {
 			super.handleMessage(msg);
 			tv.setText("server say:"+msg.obj);
 			Toast.makeText(MainActivity.this,"handle ok", 1000).show();
+		}
+	}
+	
+	public void ConnecttoServer(Socket socket, String ip, int port){
+		
+		InetSocketAddress ipAddress = null;
+		int timeout = 3000;
+		
+		ipAddress = new InetSocketAddress(ip, port);
+		try {
+			socket.connect(ipAddress, timeout);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public class ConnectThread extends Thread {
+		
+		Socket socket = null;
+		ConnectThread(Socket socket){
+			this.socket = socket;
+		}
+		
+		public void run() {
+			ConnecttoServer(socket, "115.156.249.6", 12345);
 		}
 	}
 	
