@@ -8,6 +8,10 @@ import java.io.OutputStreamWriter;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.json.JSONTokener;
+
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,7 +21,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 @SuppressLint({ "ShowToast", "HandlerLeak" })
 public class MainActivity extends ActionBarActivity {
@@ -36,26 +39,26 @@ public class MainActivity extends ActionBarActivity {
 		send = (Button) findViewById(R.id.button1);
 		tv = (TextView) findViewById(R.id.textView1);
 
-		//ÓÃhandler¹ÜÀí´¦ÀíÏß³Ìµ÷ÓÃUI
+		//è®¾ç½®handleræ–¹ä¾¿çº¿ç¨‹æ§åˆ¶UI
 		myHandler = new MyHandler();
 		final Socket socket = new Socket();
 		
 		ConnectThread connectThread = new ConnectThread(socket);
 		connectThread.start();
 		
-		//ÉèÖÃ°´Å¥ÏìÓ¦º¯Êı
+		//å‘é€æŒ‰é’®ï¼Œæ–°å¼€çº¿ç¨‹
 		send.setOnClickListener(new View.OnClickListener() {
 
 			@Override
 			public void onClick(View v) {
-				//ÍøÂçÁ¬½ÓµÄ¹¤×÷Ò»¶¨ÒªÔÚÏß³ÌÖĞÍê³É
+				//ç½‘ç»œç›¸å…³å·¥ä½œè¦åœ¨çº¿ç¨‹ä¸­è¿›è¡Œ
 				ClientThread clientThread = new ClientThread(socket);
 				clientThread.start();
 			}
 		});
 	}
 
-	//¿Í»§¶ËÏß³Ì
+	//å‘é€çº¿ç¨‹
 	public class ClientThread extends Thread{
 		
 		Socket socket = null;
@@ -64,54 +67,70 @@ public class MainActivity extends ActionBarActivity {
 			this.socket = socket;
 		}
 		
-		//ÖØĞ´runº¯Êı
+		//é‡å†™runå‡½æ•°
 		public void run() {
-			
-//			Socket socket = null;
-//			InetSocketAddress ipAddress = null;
-//			int timeout = 3000;
 			String msgFromServer = null;
 
-			String sentence = edittext.getText().toString()+"\r\n";
+			
+			String sentence = edittext.getText().toString();
+			
+			Person person = new Person();
+			person.id = 1;
+			person.name = sentence;
 			
 			try {
-				//Ïò·şÎñ¶Ë·¢ËÍÊı¾İ
+				JSONObject jsonObject = new JSONObject();
+				jsonObject.put("id", person.id);
+				jsonObject.put("name", person.name);
+				
+				//å‘æœåŠ¡å™¨å‘é€æ•°æ®
 				BufferedWriter bw = null;
 				bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-				bw.write(sentence);
+				bw.write(jsonObject.toString()+"\n");
+//				bw.write(sentence);
 				bw.flush();
 
-				//´Ó·şÎñ¶Ë»ñÈ¡Êı¾İ
+				//ä»æœåŠ¡å™¨æ¥æ”¶æ•°æ®
 				BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 				msgFromServer = br.readLine();
+				JSONTokener jsonTokener = new JSONTokener(msgFromServer);
+				JSONObject jsonObject2 = (JSONObject) jsonTokener.nextValue();
 				
-				//»ñÈ¡µ½Êı¾İºó²úÉúÒ»¸öÏûÏ¢£¬´«ËÍ¸øhandler´¦Àí
+				//å‘handlerå‘é€æ¶ˆæ¯
 				Message msg = Message.obtain();
-				msg.obj = msgFromServer;
+				msg.obj = jsonObject2;
 				myHandler.sendMessage(msg);
 				
-				//¹Ø±ÕÁ¬½Ó
+				//å…³é—­è¾“å…¥è¾“å‡ºæµ
 //				bw.close();
 //				br.close();
 //				socket.close();
 			} catch (IOException e) {
 				e.printStackTrace();
-			}
+			} catch (JSONException e) {
+				e.printStackTrace();
+			} 
 		}
 	}
 
-	//Ğ´Ò»¸öhandlerÀàÀ´´¦ÀíÏß³ÌÖĞµÄÏûÏ¢
+	//ç”¨handlerå¤„ç†æ¶ˆæ¯è¯·æ±‚ 
 	public class MyHandler extends Handler{
 		
 		public MyHandler() {  
             super(); 
         }  
 		
-		//ÖØĞ´handlerMessageº¯Êı£¬Õâ¸öº¯ÊıÏµÍ³»á×Ô¶¯µ÷ÓÃ
+		//é‡å†™handlerMessageå‡½æ•°ï¼Œæ§åˆ¶UIæ›´æ–°
 		public void handleMessage(Message msg) {
 			super.handleMessage(msg);
-			tv.setText("server say:"+msg.obj);
-			Toast.makeText(MainActivity.this,"handle ok", 1000).show();
+			
+			JSONObject jsonObject = (JSONObject) msg.obj;
+			
+			try {
+				tv.setText("server say: id is "+jsonObject.getString("id")+",name is "+jsonObject.getString("name"));
+			} catch (JSONException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	
@@ -137,8 +156,13 @@ public class MainActivity extends ActionBarActivity {
 		}
 		
 		public void run() {
-			ConnecttoServer(socket, "115.156.249.6", 12345);
+			ConnecttoServer(socket, "115.156.249.73", 12345);
 		}
+	}
+	
+	public class Person{
+		int id;
+		String name;
 	}
 	
 }
